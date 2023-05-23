@@ -1,23 +1,78 @@
 import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import * as tokenJson from './assets/tokenJson.json';
 import { Contract, ethers } from 'ethers';
+import * as tokenJson from './assets/MyToken.json';
+import * as tokenSaleJson from './assets/TokenSale.json';
+
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AppService {
-  constructor(private configService: ConfigService) {}
-  apiKey = this.configService.get<string>('ALCHEMY_API_KEY');
-  provider = new ethers.providers.AlchemyProvider(
-    'maticmum',
-    '6gU6Ca6fUzx_4kzLzSWjqOsfZEuOx598',
-  );
+  provider: ethers.providers.BaseProvider;
+  contract: Contract;
+  tokenSaleContract: Contract;
 
-  async requestTokens(address: string, signature: string) {
-    const pk = this.configService.get<string>('PRIVATE_KEY');
-    const tokenAddress = this.configService.get<string>('TOKEN_ADDRESS');
-    const contract = new Contract(tokenAddress, tokenJson.abi, this.provider);
-    const wallet = new ethers.Wallet(pk);
+  constructor(private configService: ConfigService) {
+    const apiKey = this.configService.get<string>('ALCHEMY_API_KEY');
+    this.provider = new ethers.providers.AlchemyProvider('maticmum', apiKey);
+    this.contract = new Contract(
+      this.getAddress(),
+      tokenJson.abi,
+      this.provider,
+    );
+    this.tokenSaleContract = new Contract(
+      this.getTokenSaleAddress(),
+      tokenSaleJson.abi,
+      this.provider,
+    );
+  }
+
+  getHello(): string {
+    return 'Hello World!';
+  }
+
+  getLastBlock() {
+    return this.provider.getBlock('latest');
+  }
+
+  getAddress() {
+    const address = this.configService.get<string>('TOKEN_ADDRESS');
+    return address;
+  }
+
+  getTokenSaleAddress() {
+    const tokenSaleAddress =
+      this.configService.get<string>('TOKENSALE_ADDRESS');
+    return tokenSaleAddress;
+  }
+
+  async getTotalSupply() {
+    const totalSupplyBN = await this.contract.totalSupply();
+    return ethers.utils.formatEther(totalSupplyBN);
+  }
+
+  async getBalanceOf(address: string) {
+    const balanceBN = await this.contract.balanceOf(address);
+    return ethers.utils.formatEther(balanceBN);
+  }
+
+  async getTransactionReceipt(hash: string) {
+    const tx = await this.provider.getTransaction(hash);
+    const receipt = await this.getReceipt(tx);
+    return receipt;
+  }
+
+  async getReceipt(tx: ethers.providers.TransactionResponse) {
+    return await tx.wait();
+  }
+
+  async requestTokens(address: string, amount: string) {
+    const pKey = this.configService.get<string>('PRIVATE_KEY');
+    const wallet = new ethers.Wallet(pKey);
     const signer = wallet.connect(this.provider);
-    return contract.connect(signer).mint(address, ethers.utils.parseUnits('1'));
+    return await this.tokenSaleContract
+      .connect(signer)
+      .buyTokens({ value: ethers.utils.parseEther(amount) });
   }
 }
+
+// if (ethers.utils.verifyMessage("my fingerprint", signature) != address) throw error

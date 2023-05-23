@@ -1,8 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-export class RequestTokensDto {
+export class RequestTokensDTO {
   @ApiProperty()
   readonly address: string;
   @ApiProperty()
-  readonly signature: string;
+  readonly amount: string;
 }

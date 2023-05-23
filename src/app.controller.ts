@@ -1,7 +1,6 @@
-import { Controller, Get, Post, Body } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { AppService } from './app.service';
-import { RequestTokensDto } from './types/RequestTokens.dto';
-import { ApiBody } from '@nestjs/swagger';
+import { RequestTokensDTO } from './dtos/requestTokens.dto';
 
 @Controller()
 export class AppController {
@@ -12,9 +11,33 @@ export class AppController {
     return this.appService.getHello();
   }
 
+  @Get('last-block')
+  getLastBlock() {
+    return this.appService.getLastBlock();
+  }
+
+  @Get('contract-address')
+  getAddress() {
+    return this.appService.getAddress();
+  }
+
+  @Get('total-supply')
+  getTotalSupply() {
+    return this.appService.getTotalSupply();
+  }
+
+  @Get('balance-of/:address')
+  async getBalanceOf(@Param('address') address: string) {
+    return await this.appService.getBalanceOf(address);
+  }
+
+  @Get('transaction-receipt/')
+  async getTransactionReceipt(@Query('hash') hash: string) {
+    return await this.appService.getTransactionReceipt(hash);
+  }
+
   @Post('request-tokens')
-  @ApiBody({ type: RequestTokensDto })
-  requestTokens(@Body() body: RequestTokensDto) {
-    return this.appService.requestTokens(body.address, body.signature);
+  async requestTokens(@Body() body: RequestTokensDTO) {
+    return await this.appService.requestTokens(body.address, body.amount);
   }
 }
